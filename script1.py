@@ -1,27 +1,92 @@
-import pyautogui
-import time
-import random
+import customtkinter
+import customtkinter as ctk
+import requests
 
-pyautogui.PAUSE = 0.9
+# Dicionário com nomes e símbolos
+moedas = {
+    "BRL": ("Real Brasileiro", "R$"),
+    "USD": ("Dólar Americano", "$"),
+    "EUR": ("Euro", "€"),
+    "JPY": ("Iene Japonês", "¥"),
+    "GBP": ("Libra Esterlina", "£"),
+    "ARS": ("Peso Argentino", "$"),
+    "CAD": ("Dólar Canadense", "C$")
+}
 
-# Abre Chrome pelo menu iniciar
-pyautogui.press("win")
-pyautogui.write("chrome")
-pyautogui.press("enter")
+def converter():
+    valor = entry_valor.get().replace(",", ".")
+    moeda_origem = combo_origem.get()
+    moeda_destino = combo_destino.get()
 
-# Espera entre 6 a 8 segundos para o Chrome abrir (mais natural)
-time.sleep(random.uniform(6, 8))
+    if not valor:
+        label_resultado.configure(text="⚠️ Digite um valor.")
+        return
 
-# Foca na barra de endereço e digita seu perfil no GitHub
-pyautogui.hotkey("ctrl", "l")
-pyautogui.write("github.com/ma4c89")
-pyautogui.press("enter")
+    if moeda_origem == moeda_destino:
+        label_resultado.configure(text="⚠️ Escolha moedas diferentes.")
+        return
 
-# Espera entre 7 a 10 segundos para carregar o perfil (varia dependendo da internet)
-time.sleep(random.uniform(7, 10))
+    try:
+        valor_float = float(valor)
+        url = f"https://economia.awesomeapi.com.br/last/{moeda_origem}-{moeda_destino}"
+        resposta = requests.get(url).json()
+        chave = moeda_origem + moeda_destino
+        taxa = float(resposta[chave]["bid"])
+        convertido = valor_float * taxa
 
-# Clica no botão "Repositories"
-pyautogui.click(x=213, y=161)
+        nome_destino, simbolo_destino = moedas[moeda_destino]
+        nome_origem, simbolo_origem = moedas[moeda_origem]
 
-# Espera entre 5 a 7 segundos para carregar os repositórios
-time.sleep(random.uniform(5, 7))
+        label_resultado.configure(
+            text=f"{simbolo_origem}{valor_float:.2f} ({nome_origem})\n= {simbolo_destino}{convertido:.2f} ({nome_destino})"
+        )
+    except Exception:
+        label_resultado.configure(text="❌ Erro na conversão.")
+
+def limpar():
+    entry_valor.delete(0, "end")
+    combo_origem.set("BRL")
+    combo_destino.set("USD")
+    label_resultado.configure(text="")
+
+# Interface
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("green")
+
+app = ctk.CTk()
+app.title("Conversor de Moedas")
+app.geometry("460x430")
+app.resizable(False, False)
+
+# Título
+titulo = ctk.CTkLabel(app, text="💱 Conversor de Moedas", font=("Arial", 22, "bold"))
+titulo.pack(pady=20)
+
+# Entrada de valor
+entry_valor = ctk.CTkEntry(app, placeholder_text="Digite o valor", width=200)
+entry_valor.pack(pady=10)
+
+# Seleção de moedas
+combo_origem = ctk.CTkComboBox(app, values=list(moedas.keys()), width=120)
+combo_origem.set("BRL")
+combo_origem.pack(pady=5)
+
+combo_destino = ctk.CTkComboBox(app, values=list(moedas.keys()), width=120)
+combo_destino.set("USD")
+combo_destino.pack(pady=5)
+
+# Botões
+frame_botoes = ctk.CTkFrame(app, fg_color="transparent")
+frame_botoes.pack(pady=20)
+
+botao_converter = ctk.CTkButton(frame_botoes, text="Converter", command=converter, width=100)
+botao_converter.pack(side="left", padx=10)
+
+botao_limpar = ctk.CTkButton(frame_botoes, text="Limpar", command=limpar, width=100)
+botao_limpar.pack(side="left", padx=10)
+
+# Resultado
+label_resultado = ctk.CTkLabel(app, text="", font=("Arial", 16))
+label_resultado.pack(pady=10)
+
+app.mainloop()
